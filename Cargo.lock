@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "thr-pool"
-version = "0.0.1-beta"
+name = "base-threadpool"
+version = "0.0.1"

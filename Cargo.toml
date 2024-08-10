@@ -1,7 +1,8 @@
 [package]
-name = "thr-pool"
-description = "minimal threadpool implementation"
-version = "0.0.1-beta"
+name = "base-threadpool"
+description = "minimalistic threadpool implementation"
+category = ["concurrency"]
+version = "0.0.1"
 edition = "2021"
 license = "MIT"
 
