@@ -471,8 +471,6 @@ mod tests {
 
     #[test]
     fn test_join_disposal() {
-        use std::sync::atomic::{AtomicBool, Ordering};
-
         let mut pool = ThreadPoolBuilder::default().num_threads(2).build();
         let task_completed = Arc::new(AtomicBool::new(false));
         let task_completed_clone = Arc::clone(&task_completed);
