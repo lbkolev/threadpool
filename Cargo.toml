@@ -2,7 +2,7 @@
 name = "base-threadpool"
 description = "minimalistic threadpool implementation"
 category = ["concurrency"]
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 license = "MIT"
 

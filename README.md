@@ -1,7 +1,7 @@
 # Threadpool
 Threadpool provides a way to manage and execute tasks concurrently using a fixed number of worker threads. It allows you to submit tasks that will be executed by one of the available worker threads, providing an efficient way to parallelize work across multiple threads.
 
-Maintaining a pool of threads over creating a new thread for each task has the benefit that thread creation and destruction overhead is restricted to the initial creation of the pool, which may result in better performance.
+Maintaining a pool of threads over creating a new thread for each task has the benefit that thread creation and destruction overhead is restricted to the initial creation of the pool.
 
 The implementation is dependency and `unsafe`-free.
 
@@ -32,10 +32,7 @@ You can create a ThreadPool using the builder pattern:
 ```rust
 use base_threadpool::ThreadPool;
 
-// create a thread pool with default settings
 let pool = ThreadPool::builder().build();
-
-// create a customized thread pool
 let custom_pool = ThreadPool::builder()
     .num_threads(4)
     .stack_size(3 * 1024 * 1024)
@@ -46,8 +43,7 @@ let custom_pool = ThreadPool::builder()
 Use the execute method to submit tasks to the thread pool:
 ```rust
 pool.execute(|| {
-    // Your task here
-    println!("Task executed by thread pool");
+    println!("task executed by a thread in the pool");
 });
 ```
 

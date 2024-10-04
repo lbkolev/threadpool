@@ -1,16 +1,14 @@
 #![forbid(unsafe_code)]
 
-//! ThreadPools.
-//! Threadpool provides a way to manage and execute tasks concurrently using a fixed number of worker threads. 
-//! It allows you to submit tasks that will be executed by one of the available worker threads, 
+//! Threadpool provides a way to manage and execute tasks concurrently using a fixed number of worker threads.
+//! It allows you to submit tasks that will be executed by one of the available worker threads,
 //! providing an efficient way to parallelize work across multiple threads.
 //!
-//! Maintaining a pool of threads over creating a new thread for each task has the benefit that 
-//! thread creation and destruction overhead is restricted to the initial creation of the pool, 
-//! which may result in better performance.
-//! 
+//! Maintaining a pool of threads over creating a new thread for each task has the benefit that
+//! thread creation and destruction overhead is restricted to the initial creation of the pool.
+//!
 //! # Examples
-//! 
+//!
 //! ```
 //! use base_threadpool::{ThreadPool, ThreadPoolBuilder};
 //! use std::sync::{Arc, Mutex};
@@ -68,11 +66,6 @@ impl ThreadPool {
 
     /// Schedules a task to be executed by the thread pool.
     ///
-    /// This method takes a closure and schedules it to be run on one of the worker threads.
-    ///
-    ///
-    /// # Panics
-    ///
     /// Panics if the thread pool has been shut down or if there's an error sending the job.
     ///
     /// # Examples
@@ -112,9 +105,9 @@ impl ThreadPool {
 
         self.producer
             .as_ref()
-            .unwrap()
+            .expect("err acquiring sender ref")
             .send(ThreadJob::Run(job))
-            .unwrap();
+            .expect("send error")
     }
 
     /// Waits for all worker threads in the pool to finish their current tasks and then shuts down the pool.
@@ -162,10 +155,9 @@ impl ThreadPool {
         });
     }
 
-    /// This method provides information about the level of concurrency available in the thread pool.
+    /// Provides information about the level of concurrency available in the thread pool.
     ///
     /// Returns the number of worker threads in the pool.
-    ///
     ///
     /// # Examples
     ///
@@ -269,6 +261,7 @@ impl ThreadPoolBuilder {
     }
 
     /// Builds and returns a new [`ThreadPool`] instance based on the current configuration.
+    ///
     /// # Examples
     ///
     /// ```
@@ -396,7 +389,10 @@ impl std::fmt::Display for ThreadWorker {
 mod tests {
     use super::*;
     use std::{
-        sync::{Arc, Mutex},
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex,
+        },
         thread, time,
     };
 
@@ -452,11 +448,11 @@ mod tests {
             let mut lock = v.lock().unwrap();
             *lock += 1;
 
-            thread::sleep(std::time::Duration::from_secs(5));
+            thread::sleep(time::Duration::from_secs(5));
         });
 
         pool.execute(|| {
-            thread::sleep(std::time::Duration::from_secs(10));
+            thread::sleep(time::Duration::from_secs(10));
         });
 
         pool.join();
@@ -474,7 +470,31 @@ mod tests {
     }
 
     #[test]
-    fn test_join_disposal() {}
+    fn test_join_disposal() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let mut pool = ThreadPoolBuilder::default().num_threads(2).build();
+        let task_completed = Arc::new(AtomicBool::new(false));
+        let task_completed_clone = Arc::clone(&task_completed);
+
+        pool.execute(move || {
+            thread::sleep(time::Duration::from_millis(2500));
+            task_completed_clone.store(true, Ordering::SeqCst);
+        });
+        pool.execute(|| {
+            thread::sleep(time::Duration::from_secs(1));
+        });
+        pool.join();
+
+        assert!(
+            task_completed.load(Ordering::SeqCst),
+            "task not completed before shutdown"
+        );
+        assert!(
+            pool.producer.is_none(),
+            "producer isn't none after pool join"
+        );
+    }
 
     #[test]
     fn test_setup_builder_default() {
@@ -513,5 +533,16 @@ mod tests {
         let pool = ThreadPoolBuilder::default().stack_size(5 * 1024 * 1024);
 
         assert_eq!(pool.stack_size, Some(5 * 1024 * 1024));
+    }
+
+    #[test]
+    #[should_panic(expected = "err acquiring sender ref")]
+    fn test_execute_after_join_panics() {
+        let mut pool = ThreadPoolBuilder::default().num_threads(2).build();
+
+        pool.join();
+        pool.execute(|| {
+            println!("shouldn't execute");
+        });
     }
 }
